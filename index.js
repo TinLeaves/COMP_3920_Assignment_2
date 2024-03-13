@@ -1,4 +1,4 @@
-require("./utils");
+require('./utils');
 
 require('dotenv').config();
 const express = require('express');
@@ -7,22 +7,18 @@ const MongoStore = require('connect-mongo');
 const bcrypt = require('bcrypt');
 const saltRounds = 12;
 
+
 const database = include('databaseConnection');
 const db_utils = include('database/db_utils');
 const db_users = include('database/db_users');
 const success = db_utils.printMySQLVersion();
 
-const port = process.env.PORT || 3020;
+const port = process.env.PORT || 3000;
 
 const app = express();
 
-const Joi = require("joi");
+const expireTime = 1 * 60 * 60 * 1000; 
 
-app.use('/public', express.static('public'));
-
-app.set('view engine', 'ejs');
-
-const expireTime = 1 * 60 * 60 * 1000; //expires after 1 hour  (hours * minutes * seconds * millis)
 
 /* secret information section */
 const mongodb_host = process.env.MONGODB_HOST;
@@ -33,56 +29,41 @@ const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
 /* END secret section */
 
-app.use(express.urlencoded({ extended: false }));
+app.use('/public', express.static('public'));
+
+app.set('view engine', 'ejs');
+
+app.use(express.urlencoded({extended: false}));
 
 var mongoStore = MongoStore.create({
-  mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_host}/sessions`,
-  crypto: {
-    secret: mongodb_session_secret
-  }
-});
+	mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_host}/sessions`,
+	crypto: {
+		secret: mongodb_session_secret
+	}
+})
 
-app.use(session({
-  secret: node_session_secret,
-  store: mongoStore,
-  saveUninitialized: false,
-  resave: true
+app.use(session({ 
+    secret: node_session_secret,
+	store: mongoStore,
+	saveUninitialized: false, 
+	resave: true
 }
 ));
 
-function isValidSession(req) {
-  if (req.session.authenticated) {
-    return true;
-  }
-  return false;
-}
-
-function sessionValidation(req, res, next) {
-  if (isValidSession(req)) {
-    next();
-  }
-  else {
-    res.redirect('/login');
-  }
-}
-
 app.get('/', (req, res) => {
-  const authenticated = req.session.authenticated;
-  const username = req.session.username;
-
-  res.render('index', { authenticated, username });
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
+    const authenticated = req.session.authenticated;
+    const username = req.session.username;
+  
+    res.render('index', { authenticated, username });
 });
 
 app.get('/signup', (req, res) => {
-  res.render('signup');
+    const errorMsg = req.query.error;
+    const signupError = req.query.signupError; // Add this line to retrieve signupError
+    res.render('signup', { errorMsg, signupError });
 });
 
-app.post('/signupSubmit', async (req, res) => {
+app.post('/signupSubmit', async (req,res) => {
   var username = req.body.username;
   var email = req.body.email;
   var password = req.body.password;
@@ -103,110 +84,93 @@ app.post('/signupSubmit', async (req, res) => {
     return;
   }
 
-  // Validate inputs using Joi
-  const schema = Joi.object({
-    username: Joi.string().alphanum().max(20).required(),
-    email: Joi.string().email().required(),
-    password: Joi.string()
-      .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{10,}$'))
-      .required()
-  });
+    var hashedPassword = bcrypt.hashSync(password, saltRounds);
 
-  const validationResult = schema.validate({ username, email, password });
-  if (validationResult.error != null) {
-    console.log(validationResult.error);
-    res.redirect("/signup");
-    return;
-  }
+    var success = await db_users.createUser({email: email, user: username, hashedPassword: hashedPassword });
 
-  // Check if username already exists in MySQL database
-  const existingUser = await db_users.getUser({ user: username });
-  if (existingUser) {
-    const errorMsg = "Username already exists.";
-    res.render('signupSubmit', { errorMsg: errorMsg });
-    return;
-  }
-
-  // Hash password
-  var hashedPassword = await bcrypt.hash(password, saltRounds);
-
-  // Insert user into MySQL database
-  const createUserResult = await db_users.createUser({
-    user: username,
-    hashedPassword: hashedPassword,
-    email: email
-  });
-
-  if (!createUserResult) {
-    console.log("Error inserting user into MySQL database");
-    res.redirect("/signup");
-    return;
-  }
-
-  // Set session variables
-  req.session.authenticated = true;
-  req.session.username = username;
-  req.session.email = email;
-  req.session.user_type = "user";
-
-  res.redirect("/members");
+    if (success) {
+        req.session.authenticated = true;
+        req.session.username = username;
+        // var results = await db_users.getUsers();
+        res.redirect("/members");
+    } else {
+        res.render('signup', { 
+            errorMsg: "Username already exists. Please choose a different username."
+        });
+    }
 });
-
 
 app.get('/login', (req, res) => {
-  res.render('login');
-});
+    const loginMsg = req.query.error;
+    res.render('login', { loginMsg });
+  });
 
 app.post('/loginSubmit', async (req, res) => {
-  // extract username and password from request body
-  const { username, password } = req.body;
+    const username = req.body.username;
+    const password = req.body.password;
 
-  // Login handler
-  // Validate username
-  const usernameSchema = Joi.string().alphanum().max(20).required();
-  const usernameValidationResult = usernameSchema.validate(username);
-  if (usernameValidationResult.error != null) {
-    console.log(usernameValidationResult.error);
-    res.redirect('/login');
-    return;
-  }
+    let loginMsg = "";
 
-  // Find user in database using username
-  const user = await db_users.getUser({ user: username });
+    const results = await db_users.getUser({ user: username });
 
-  if (!user) {
-    console.log('Invalid username/password combination');
-    const errorMsg = 'Invalid username/password combination.';
-    res.render('loginSubmit', { errorMsg: errorMsg });
-    return;
-  }
+    if (!username || results.length !== 1) {
+        loginMsg = "User not found. ";
+        res.redirect(`/login?error=${encodeURIComponent(loginMsg)}`);
+        return;
+    }
 
-  // Compare password with stored BCrypt password
-  const isPasswordMatch = await bcrypt.compare(password, user.password);
-  if (!isPasswordMatch) {
-    console.log('Password is incorrect');
-    const errorMsg = 'Password is incorrect.';
-    res.render('loginSubmit', { errorMsg: errorMsg });
-    return;
-  }
+    if (!password) {
+        loginMsg = "Incorrect password. Please try again. ";
+        res.redirect(`/login?error=${encodeURIComponent(loginMsg)}`);
+        return;
+    }
 
-  // Store username in session
-  req.session.authenticated = true;
-  req.session.username = user.username;
-  req.session.cookie.maxAge = expireTime;
-  req.session.user_type = user.user_type;
+    const storedPassword = results[0].password;
+    if (bcrypt.compareSync(password, storedPassword)) {
+        req.session.authenticated = true;
+        req.session.username = username;
+        req.session.cookie.maxAge = expireTime;
 
-  // Redirect to members page
-  res.redirect('/members');
+        res.redirect('/members');
+        return;
+    } else {
+        loginMsg = "Incorrect password. Please try again. ";
+        res.redirect(`/login?error=${encodeURIComponent(loginMsg)}`);
+        return;
+    }
 });
+
+  
+function isValidSession(req) {
+	if (req.session.authenticated) {
+		return true;
+	}
+	return false;
+}
+
+function sessionValidation(req, res, next) {
+	if (!isValidSession(req)) {
+		req.session.destroy();
+		res.redirect('/login');
+		return;
+	}
+	else {
+		next();
+	}
+}
+
+app.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/');
+  });
 
 app.use(express.static(__dirname + "/public"));
 
-app.get("*", (req, res) => {
-  res.status(404);
-  res.render("404");
-});
+app.get("*", (req,res) => {
+	res.status(404);
+	res.render("404");
+})
 
 app.listen(port, () => {
-  console.log("Node application listening on port " + port);
-});
+	console.log("Node application listening on port "+port);
+}); 
