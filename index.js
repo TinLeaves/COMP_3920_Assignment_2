@@ -63,41 +63,77 @@ app.get('/signup', (req, res) => {
     res.render('signup', { errorMsg, signupError });
 });
 
-app.post('/signupSubmit', async (req,res) => {
-  var username = req.body.username;
-  var email = req.body.email;
-  var password = req.body.password;
+// app.post('/signupSubmit', async (req,res) => {
+//   var username = req.body.username;
+//   var email = req.body.email;
+//   var password = req.body.password;
 
-  // Check for empty fields
-  let errorMsg = "";
+//   // Check for empty fields
+//   let errorMsg = "";
+//   if (!username) {
+//     errorMsg += "Name is required.";
+//   }
+//   if (!email) {
+//     errorMsg += "Email is required.";
+//   }
+//   if (!password) {
+//     errorMsg += "Password is required.";
+//   }
+//   if (errorMsg !== "") {
+//     res.redirect(`/signup?error=${encodeURIComponent(errorMsg)}`);
+//     return;
+//   }
+
+//     var hashedPassword = bcrypt.hashSync(password, saltRounds);
+
+//     var success = await db_users.createUser({email: email, user: username, hashedPassword: hashedPassword });
+
+//     if (success) {
+//         req.session.authenticated = true;
+//         req.session.username = username;
+//         res.redirect("/members");
+//     } else {
+//         res.render('signup', { 
+//             errorMsg: "Username already exists. Please choose a different username."
+//         });
+//     }
+// });
+
+app.post('/signupSubmit', async (req, res) => {
+  const { username, email, password } = req.body;
+
+  let errorMsg = '';
+
   if (!username) {
-    errorMsg += "Name is required.";
+      errorMsg += 'Name is required. ';
   }
   if (!email) {
-    errorMsg += "Email is required.";
+      errorMsg += 'Email is required. ';
   }
   if (!password) {
-    errorMsg += "Password is required.";
+      errorMsg += 'Password is required. ';
+  } else if (password.length < 10) {
+      errorMsg += 'Password must be at least 10 characters long. ';
+  } else if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      errorMsg += 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character. ';
   }
-  if (errorMsg !== "") {
-    res.redirect(`/signup?error=${encodeURIComponent(errorMsg)}`);
-    return;
+
+  if (errorMsg !== '') {
+      res.redirect(`/signup?error=${encodeURIComponent(errorMsg)}`);
+      return;
   }
 
-    var hashedPassword = bcrypt.hashSync(password, saltRounds);
+  const hashedPassword = bcrypt.hashSync(password, saltRounds);
 
-    var success = await db_users.createUser({email: email, user: username, hashedPassword: hashedPassword });
+  const success = await db_users.createUser({ email, user: username, hashedPassword });
 
-    if (success) {
-        req.session.authenticated = true;
-        req.session.username = username;
-        // var results = await db_users.getUsers();
-        res.redirect("/members");
-    } else {
-        res.render('signup', { 
-            errorMsg: "Username already exists. Please choose a different username."
-        });
-    }
+  if (success) {
+      req.session.authenticated = true;
+      req.session.username = username;
+      res.redirect('/members');
+  } else {
+      res.render('signup', { errorMsg: 'Username already exists. Please choose a different username.' });
+  }
 });
 
 app.get('/login', (req, res) => {
