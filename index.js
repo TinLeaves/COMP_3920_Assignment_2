@@ -50,54 +50,21 @@ app.use(session({
 }
 ));
 
+let authenticated = false; // Initialize globally
+
 app.get('/', (req, res) => {
-    const authenticated = req.session.authenticated;
-    const username = req.session.username;
-  
-    res.render('index', { authenticated, username });
+  // Set authenticated based on session
+  const authenticated = isValidSession(req);
+  const username = req.session.username;
+  res.render('index', { authenticated, username });
 });
 
 app.get('/signup', (req, res) => {
-    const errorMsg = req.query.error;
-    const signupError = req.query.signupError; // Add this line to retrieve signupError
-    res.render('signup', { errorMsg, signupError });
+  const errorMsg = req.query.error;
+  const signupError = req.query.signupError; 
+  const authenticated = isValidSession(req);
+  res.render('signup', { errorMsg, signupError, authenticated });
 });
-
-// app.post('/signupSubmit', async (req,res) => {
-//   var username = req.body.username;
-//   var email = req.body.email;
-//   var password = req.body.password;
-
-//   // Check for empty fields
-//   let errorMsg = "";
-//   if (!username) {
-//     errorMsg += "Name is required.";
-//   }
-//   if (!email) {
-//     errorMsg += "Email is required.";
-//   }
-//   if (!password) {
-//     errorMsg += "Password is required.";
-//   }
-//   if (errorMsg !== "") {
-//     res.redirect(`/signup?error=${encodeURIComponent(errorMsg)}`);
-//     return;
-//   }
-
-//     var hashedPassword = bcrypt.hashSync(password, saltRounds);
-
-//     var success = await db_users.createUser({email: email, user: username, hashedPassword: hashedPassword });
-
-//     if (success) {
-//         req.session.authenticated = true;
-//         req.session.username = username;
-//         res.redirect("/members");
-//     } else {
-//         res.render('signup', { 
-//             errorMsg: "Username already exists. Please choose a different username."
-//         });
-//     }
-// });
 
 app.post('/signupSubmit', async (req, res) => {
   const { username, email, password } = req.body;
@@ -130,58 +97,61 @@ app.post('/signupSubmit', async (req, res) => {
   if (success) {
       req.session.authenticated = true;
       req.session.username = username;
-      res.redirect('/members');
+      res.redirect('/page');
   } else {
       res.render('signup', { errorMsg: 'Username already exists. Please choose a different username.' });
   }
 });
 
 app.get('/login', (req, res) => {
-    const loginMsg = req.query.error;
-    res.render('login', { loginMsg });
-  });
-
-app.post('/loginSubmit', async (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
-
-    let loginMsg = "";
-
-    const results = await db_users.getUser({ user: username });
-
-    if (!username || results.length !== 1) {
-        loginMsg = "User not found. ";
-        res.redirect(`/login?error=${encodeURIComponent(loginMsg)}`);
-        return;
-    }
-
-    if (!password) {
-        loginMsg = "Incorrect password. Please try again. ";
-        res.redirect(`/login?error=${encodeURIComponent(loginMsg)}`);
-        return;
-    }
-
-    const storedPassword = results[0].password;
-    if (bcrypt.compareSync(password, storedPassword)) {
-        req.session.authenticated = true;
-        req.session.username = username;
-        req.session.cookie.maxAge = expireTime;
-
-        res.redirect('/members');
-        return;
-    } else {
-        loginMsg = "Incorrect password. Please try again. ";
-        res.redirect(`/login?error=${encodeURIComponent(loginMsg)}`);
-        return;
-    }
+  const loginMsg = req.query.error;
+  const authenticated = isValidSession(req);
+  res.render('login', { loginMsg, authenticated });
 });
 
+app.post('/loginSubmit', async (req, res) => {
+  const username = req.body.username;
+  const password = req.body.password;
+
+  let loginMsg = "";
+
+  const results = await db_users.getUser({ user: username });
+
+  console.log("Results from database:", results);
+
+  if (!username || results.length !== 1) {
+      loginMsg = "User not found. ";
+      console.log("User not found.");
+      res.redirect(`/login?error=${encodeURIComponent(loginMsg)}`);
+      return;
+  }
+
+  const storedPassword = results[0].password_hash; 
+
+  console.log("Input password:", password);
+  console.log("Stored password hash:", storedPassword);
+
+
+  if (!bcrypt.compare(password, storedPassword)) {
+      loginMsg = "Incorrect password. Please try again. ";
+      console.log("Incorrect password.");
+      res.redirect(`/login?error=${encodeURIComponent(loginMsg)}`);
+      return;
+  }
+
+  // If the password matches, set session variables and redirect
+  req.session.authenticated = true;
+  req.session.username = username;
+  req.session.cookie.maxAge = expireTime;
+
+  console.log("Login successful for user:", username);
+
+  res.redirect('/'); 
+});
   
+// Middleware to check session validity
 function isValidSession(req) {
-	if (req.session.authenticated) {
-		return true;
-	}
-	return false;
+  return req.session.authenticated ? true : false;
 }
 
 function sessionValidation(req, res, next) {
@@ -196,16 +166,17 @@ function sessionValidation(req, res, next) {
 }
 
 app.get('/logout', (req, res) => {
-    req.session.destroy();
-    res.redirect('/');
-  });
+  req.session.destroy();
+  authenticated = false; // Set authenticated to false
+  res.redirect('/');
+});
 
 app.use(express.static(__dirname + "/public"));
 
-app.get("*", (req,res) => {
-	res.status(404);
-	res.render("404");
-})
+app.get('*', (req, res) => {
+  const authenticated = isValidSession(req);
+  res.status(404).render('404', { authenticated });
+});
 
 app.listen(port, () => {
 	console.log("Node application listening on port "+port);
