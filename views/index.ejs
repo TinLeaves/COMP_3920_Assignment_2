@@ -1,19 +1,19 @@
 <%- include("templates/header") %>
 <% if (authenticated) { %>
   <h2>Your Chats</h2>
-  <table>
+  <table style="width: 100%;">
       <thead>
           <tr>
-              <th>Group Name</th>
-              <th>Last Message</th>
-              <th>Unread Messages</th>
+              <th style="padding: 5px; text-align: left;">Group Name</th>
+              <th style="padding: 5px; text-align: left;">Last Message</th>
+              <th style="padding: 5px; text-align: left;">Unread Messages</th>
           </tr>
       </thead>
       <tbody>
           <% userGroups.forEach(group => { %>
               <tr>
-                  <td><%= group.name %></td>
-                  <td>
+                  <td style="padding: 5px; text-align: left;"><%= group.name %></td>
+                  <td style="padding: 5px; text-align: left;">
                       <% if (group.last_message_date) { %>
                           <% if (group.days_since_last_message === 0) { %>
                               <%= group.last_message_date %> (today)
@@ -26,7 +26,7 @@
                           No messages
                       <% } %>
                   </td>
-                  <td><%= group.unread_messages %></td>
+                  <td style="padding: 5px; text-align: left;"><%= group.unread_messages %></td>
               </tr>
           <% }); %>
       </tbody>

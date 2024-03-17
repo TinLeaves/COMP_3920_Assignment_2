@@ -5,7 +5,7 @@
     <label for="groupName">Group Name:</label>
     <input type="text" id="groupName" name="groupName" required><br><br>
 
-    <div style="max-height: 100px; max-width: 300px; overflow-y: auto;">
+    <div style="max-height: 100px; width:100%; overflow-y: auto;">
         <% users.forEach(user => { %>
             <input type="checkbox" id="<%= user.username %>" name="selectedUsers" value="<%= user.username %>">
             <label for="<%= user.username %>"><%= user.username %></label><br>

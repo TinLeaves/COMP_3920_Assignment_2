@@ -225,7 +225,7 @@ function isValidSession(req) {
 function sessionValidation(req, res, next) {
 	if (!isValidSession(req)) {
 		req.session.destroy();
-		res.redirect('/login');
+		res.redirect('/');
 		return;
 	}
 	else {
