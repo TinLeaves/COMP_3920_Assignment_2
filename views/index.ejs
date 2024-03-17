@@ -13,7 +13,19 @@
           <% userGroups.forEach(group => { %>
               <tr>
                   <td><%= group.name %></td>
-                  <td><%= group.last_message_date %> (<%= group.days_since_last_message %> days ago)</td>
+                  <td>
+                      <% if (group.last_message_date) { %>
+                          <% if (group.days_since_last_message === 0) { %>
+                              <%= group.last_message_date %> (today)
+                          <% } else if (group.days_since_last_message === 1) { %>
+                              <%= group.last_message_date %> (yesterday)
+                          <% } else { %>
+                              <%= group.last_message_date %> (<%= group.days_since_last_message %> days ago)
+                          <% } %>
+                      <% } else { %>
+                          No messages
+                      <% } %>
+                  </td>
                   <td><%= group.unread_messages %></td>
               </tr>
           <% }); %>
