@@ -11,6 +11,7 @@ const saltRounds = 12;
 const database = include('databaseConnection');
 const db_utils = include('database/db_utils');
 const db_users = include('database/db_users');
+const db_groups = include('database/db_groups');
 const success = db_utils.printMySQLVersion();
 
 const port = process.env.PORT || 3000;
@@ -52,11 +53,40 @@ app.use(session({
 
 let authenticated = false; // Initialize globally
 
-app.get('/', (req, res) => {
-  // Set authenticated based on session
+// app.get('/', (req, res) => {
+//   // Set authenticated based on session
+//   const authenticated = isValidSession(req);
+//   const username = req.session.username;
+//   res.render('index', { authenticated, username });
+// });
+
+app.get('/', sessionValidation, async (req, res) => {
   const authenticated = isValidSession(req);
   const username = req.session.username;
-  res.render('index', { authenticated, username });
+  try {
+      const userGroups = await db_groups.getUserGroupsByUsername(username);
+      const totalGroups = userGroups.length;
+      res.render('index', { authenticated, username, userGroups, totalGroups });
+  } catch (error) {
+      console.error("Error rendering index:", error);
+      res.status(500).send('Internal Server Error');
+  }
+});
+
+app.post('/createGroup', sessionValidation, async (req, res) => {
+  const username = req.session.username;
+  const groupName = req.body.groupName;
+  try {
+      const success = await db_groups.createGroup(username, groupName);
+      if (success) {
+          res.redirect('/');
+      } else {
+          res.status(500).send('Error creating group');
+      }
+  } catch (error) {
+      console.error("Error creating group:", error);
+      res.status(500).send('Internal Server Error');
+  }
 });
 
 app.get('/signup', (req, res) => {

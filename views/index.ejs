@@ -1,13 +1,29 @@
 <%- include("templates/header") %>
+<h2>Your Chats</h2>
 
-  <% if (authenticated) { %>
-    <p>Hello, <%= username %>.</p>
-    <a href="/members"><button>Go to Members Area</button></a><br>
-    <a href="/logout"><button>Logout</button></a>
-  <% } else { %>
-    <a href="/signup"><button>Sign Up</button></a><br>
-    <a href="/login"><button>Log In</button></a>
-  <% } %>
+<table>
+    <thead>
+        <tr>
+            <th>Group Name</th>
+            <th>Last Message</th>
+            <th>Unread Messages</th>
+        </tr>
+    </thead>
+    <tbody>
+        <% userGroups.forEach(group => { %>
+            <tr>
+                <td><%= group.name %></td>
+                <td><%= group.last_message_date %> (<%= group.days_since_last_message %> days ago)</td>
+                <td><%= group.unread_messages %></td>
+            </tr>
+        <% }); %>
+    </tbody>
+</table>
+
+<p>Total Groups: <%= totalGroups %></p>
+
+<form action="/createGroup" method="POST">
+    <button type="submit">Create Group</button>
+</form>
 
 <%- include("templates/footer") %>
-
