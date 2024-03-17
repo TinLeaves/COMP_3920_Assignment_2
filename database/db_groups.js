@@ -25,7 +25,7 @@ async function getUserGroupsByUsername(username) {
     }
 }
 
-async function createGroup(userId, groupName) {
+async function createGroup(groupName, creatorUsername, selectedUsers) {
     const createGroupSQL = `
         INSERT INTO room (name, start_datetime)
         VALUES (?, NOW())
@@ -38,13 +38,27 @@ async function createGroup(userId, groupName) {
         // Insert new group
         const [groupResult] = await database.query(createGroupSQL, [groupName]);
         const groupId = groupResult.insertId;
-        // Link user to the group
-        await database.query(createRoomUserSQL, [userId, groupId]);
+
+        // Get creator user id
+        const [creatorUser] = await database.query('SELECT user_id FROM user WHERE username = ?', [creatorUsername]);
+        const creatorUserId = creatorUser[0].user_id;
+
+        // Link creator user to the group
+        await database.query(createRoomUserSQL, [creatorUserId, groupId]);
+
+        // Link selected users to the group
+        for (const username of selectedUsers) {
+            const [user] = await database.query('SELECT user_id FROM user WHERE username = ?', [username]);
+            const userId = user[0].user_id;
+            await database.query(createRoomUserSQL, [userId, groupId]);
+        }
+
         return true;
     } catch (error) {
         console.error("Error creating group:", error);
         return false;
     }
 }
+
 
 module.exports = { getUserGroupsByUsername, createGroup };

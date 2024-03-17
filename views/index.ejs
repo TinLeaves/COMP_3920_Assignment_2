@@ -1,29 +1,32 @@
 <%- include("templates/header") %>
-<h2>Your Chats</h2>
+<% if (authenticated) { %>
+  <h2>Your Chats</h2>
+  <table>
+      <thead>
+          <tr>
+              <th>Group Name</th>
+              <th>Last Message</th>
+              <th>Unread Messages</th>
+          </tr>
+      </thead>
+      <tbody>
+          <% userGroups.forEach(group => { %>
+              <tr>
+                  <td><%= group.name %></td>
+                  <td><%= group.last_message_date %> (<%= group.days_since_last_message %> days ago)</td>
+                  <td><%= group.unread_messages %></td>
+              </tr>
+          <% }); %>
+      </tbody>
+  </table>
 
-<table>
-    <thead>
-        <tr>
-            <th>Group Name</th>
-            <th>Last Message</th>
-            <th>Unread Messages</th>
-        </tr>
-    </thead>
-    <tbody>
-        <% userGroups.forEach(group => { %>
-            <tr>
-                <td><%= group.name %></td>
-                <td><%= group.last_message_date %> (<%= group.days_since_last_message %> days ago)</td>
-                <td><%= group.unread_messages %></td>
-            </tr>
-        <% }); %>
-    </tbody>
-</table>
-
-<p>Total Groups: <%= totalGroups %></p>
-
-<form action="/createGroup" method="POST">
+  <p>Total Groups: <%= totalGroups %></p>
+  <form action="/createGroup" method="GET">
     <button type="submit">Create Group</button>
 </form>
+<% } else { %>
+  <a href="/signup"><button>Sign Up</button></a><br>
+  <a href="/login"><button>Log In</button></a>
+<% } %>
 
 <%- include("templates/footer") %>

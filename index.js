@@ -60,40 +60,68 @@ let authenticated = false; // Initialize globally
 //   res.render('index', { authenticated, username });
 // });
 
-app.get('/', sessionValidation, async (req, res) => {
-  const authenticated = isValidSession(req);
-  const username = req.session.username;
-  try {
+app.get('/', async (req, res) => {
+  if (req.session.authenticated) {
+    const username = req.session.username;
+    try {
       const userGroups = await db_groups.getUserGroupsByUsername(username);
       const totalGroups = userGroups.length;
-      res.render('index', { authenticated, username, userGroups, totalGroups });
-  } catch (error) {
+      res.render('index', { authenticated: true, username, userGroups, totalGroups });
+    } catch (error) {
       console.error("Error rendering index:", error);
       res.status(500).send('Internal Server Error');
+    }
+  } else {
+    res.render('index', { authenticated: false });
   }
 });
 
-app.post('/createGroup', sessionValidation, async (req, res) => {
-  const username = req.session.username;
-  const groupName = req.body.groupName;
+
+// Route to render the create group page
+app.get('/createGroup', sessionValidation, async (req, res) => {
   try {
-      const success = await db_groups.createGroup(username, groupName);
-      if (success) {
-          res.redirect('/');
-      } else {
-          res.status(500).send('Error creating group');
-      }
+    const authenticated = isValidSession(req);
+    const username = req.session.username;
+    const users = await db_users.getAllUsers(); // Function to get all users from the database
+    res.render('createGroup', { users, authenticated, username });
   } catch (error) {
-      console.error("Error creating group:", error);
-      res.status(500).send('Internal Server Error');
+    console.error("Error rendering create group page:", error);
+    res.status(500).send('Internal Server Error');
   }
 });
 
+// Route to handle the form submission for creating a group
+app.post('/createGroup', sessionValidation, async (req, res) => {
+  const { groupName, selectedUsers } = req.body;
+  const creatorUsername = req.session.username;
+  try {
+    // Implement function to create group with selected users
+    const success = await db_groups.createGroup(groupName, creatorUsername, selectedUsers);
+    if (success) {
+      res.redirect('/');
+    } else {
+      res.status(500).send('Error creating group');
+    }
+  } catch (error) {
+    console.error("Error creating group:", error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// app.get('/signup', (req, res) => {
+//   const errorMsg = req.query.error;
+//   const signupError = req.query.signupError; 
+//   const authenticated = isValidSession(req);
+//   res.render('signup', { errorMsg, signupError, authenticated });
+// });
 app.get('/signup', (req, res) => {
-  const errorMsg = req.query.error;
-  const signupError = req.query.signupError; 
-  const authenticated = isValidSession(req);
-  res.render('signup', { errorMsg, signupError, authenticated });
+  if (req.session.authenticated) {
+    res.redirect('/');
+  } else {
+    const errorMsg = req.query.error;
+    const signupError = req.query.signupError; 
+    res.render('signup', { errorMsg, signupError, authenticated: false });
+  }
 });
 
 app.post('/signupSubmit', async (req, res) => {
@@ -133,11 +161,21 @@ app.post('/signupSubmit', async (req, res) => {
   }
 });
 
+// app.get('/login', (req, res) => {
+//   const loginMsg = req.query.error;
+//   const authenticated = isValidSession(req);
+//   res.render('login', { loginMsg, authenticated });
+// });
+
 app.get('/login', (req, res) => {
-  const loginMsg = req.query.error;
-  const authenticated = isValidSession(req);
-  res.render('login', { loginMsg, authenticated });
+  if (req.session.authenticated) {
+    res.redirect('/');
+  } else {
+    const loginMsg = req.query.error;
+    res.render('login', { loginMsg, authenticated: false });
+  }
 });
+
 
 app.post('/loginSubmit', async (req, res) => {
   const username = req.body.username;

@@ -66,4 +66,18 @@ async function getUser(postData) {
 	}
 }
 
-module.exports = {createUser, getUsers, getUser};
+async function getAllUsers() {
+    const getAllUsersSQL = `
+        SELECT username
+        FROM user;
+    `;
+    try {
+        const [rows] = await database.query(getAllUsersSQL);
+        return rows;
+    } catch (error) {
+        console.error("Error getting all users:", error);
+        return [];
+    }
+}
+
+module.exports = {createUser, getUsers, getUser, getAllUsers};
