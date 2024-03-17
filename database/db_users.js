@@ -66,11 +66,19 @@ async function getUser(postData) {
 	}
 }
 
-async function getAllUsers() {
-    const getAllUsersSQL = `
+async function getAllUsers(excludeCurrentUser) {
+    let getAllUsersSQL = `
         SELECT username
-        FROM user;
+        FROM user
     `;
+
+    if (excludeCurrentUser) {
+        const currentUser = await getUser({ user: excludeCurrentUser });
+        if (currentUser) {
+            getAllUsersSQL += ` WHERE username != '${excludeCurrentUser}'`;
+        }
+    }
+
     try {
         const [rows] = await database.query(getAllUsersSQL);
         return rows;

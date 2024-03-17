@@ -82,7 +82,7 @@ app.get('/createGroup', sessionValidation, async (req, res) => {
   try {
     const authenticated = isValidSession(req);
     const username = req.session.username;
-    const users = await db_users.getAllUsers(); // Function to get all users from the database
+    const users = await db_users.getAllUsers(username); // Function to get all users from the database, excluding the current user
     res.render('createGroup', { users, authenticated, username });
   } catch (error) {
     console.error("Error rendering create group page:", error);
