@@ -49,6 +49,11 @@ async function createGroup(groupName, creatorUsername, selectedUsers) {
         // Link creator user to the group
         await database.query(createRoomUserSQL, [creatorUserId, groupId]);
 
+        // If selectedUsers is not an array, make it an array with a single value
+        if (!Array.isArray(selectedUsers)) {
+            selectedUsers = [selectedUsers];
+        }
+
         // Link selected users to the group
         for (const username of selectedUsers) {
             const [user] = await database.query('SELECT user_id FROM user WHERE username = ?', [username]);
