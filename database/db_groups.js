@@ -44,7 +44,11 @@ async function createGroup(groupName, creatorUsername, selectedUsers) {
 
         // Get creator user id
         const [creatorUser] = await database.query('SELECT user_id FROM user WHERE username = ?', [creatorUsername]);
-        const creatorUserId = creatorUser[0].user_id;
+        const creatorUserId = creatorUser[0]?.user_id; // Using optional chaining to handle potential undefined
+
+        if (!creatorUserId) {
+            throw new Error('Creator user not found');
+        }
 
         // Link creator user to the group
         await database.query(createRoomUserSQL, [creatorUserId, groupId]);
@@ -57,7 +61,13 @@ async function createGroup(groupName, creatorUsername, selectedUsers) {
         // Link selected users to the group
         for (const username of selectedUsers) {
             const [user] = await database.query('SELECT user_id FROM user WHERE username = ?', [username]);
-            const userId = user[0].user_id;
+            const userId = user[0]?.user_id; // Using optional chaining to handle potential undefined
+
+            if (!userId) {
+                console.error(`User '${username}' not found`);
+                continue; // Skip this user and continue with the next one
+            }
+
             await database.query(createRoomUserSQL, [userId, groupId]);
         }
 
@@ -118,4 +128,21 @@ async function sendMessage(groupId, username, messageText) {
     }
 }
 
-module.exports = { getUserGroupsByUsername, createGroup, getGroupMessages, getGroupNameById, sendMessage };
+async function isUserMemberOfGroup(username, groupId) {
+    try {
+      // Get the user ID using the username
+      const [userResult] = await database.query('SELECT user_id FROM user WHERE username = ?', [username]);
+      const userId = userResult[0].user_id;
+  
+      // Check if the user is a member of the group
+      const [membership] = await database.query('SELECT 1 FROM room_user WHERE user_id = ? AND room_id = ?', [userId, groupId]);
+  
+      // Return true if the user is a member, false otherwise
+      return membership.length > 0;
+    } catch (error) {
+      console.error("Error checking user membership:", error);
+      throw error; // Propagate the error to the caller
+    }
+  }
+
+module.exports = { getUserGroupsByUsername, createGroup, getGroupMessages, getGroupNameById, sendMessage, isUserMemberOfGroup };

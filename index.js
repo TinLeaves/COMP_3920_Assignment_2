@@ -98,15 +98,21 @@ app.post('/createGroup', sessionValidation, async (req, res) => {
   }
 });
 
+// 
+
 // Route to display messages for a specific group
 app.get('/group/:groupId/messages', sessionValidation, async (req, res) => {
   try {
     const authenticated = isValidSession(req);
-    let username = null; // Initialize username as null
-    if (authenticated) {
-      username = req.session.username; // Set username if authenticated
-    }
+    const username = req.session.username;
     const groupId = req.params.groupId;
+
+    // Check if the logged-in user is a member of the group
+    const isMember = await db_groups.isUserMemberOfGroup(username, groupId);
+    if (!isMember) {
+      // If not a member, respond with a 400 error
+      return res.status(400).send('You are not authorized to access this group. - 400');
+    }
     
     // Fetch group name by group ID
     const groupName = await db_groups.getGroupNameById(groupId);
@@ -121,9 +127,29 @@ app.get('/group/:groupId/messages', sessionValidation, async (req, res) => {
   }
 });
 
+// Middleware to check if the logged-in user is authorized to access the group
+async function isAuthorizedGroup(req, res, next) {
+  try {
+    const username = req.session.username;
+    const groupId = req.params.groupId;
+
+    // Check if the logged-in user is a member of the group
+    const isMember = await db_groups.isUserMemberOfGroup(username, groupId);
+    if (isMember) {
+      // If authorized, proceed to the next middleware
+      next();
+    } else {
+      // If not authorized, respond with a 400 error
+      res.status(400).send('You are not authorized to access this group. - 400');
+    }
+  } catch (error) {
+    console.error("Error checking group authorization:", error);
+    res.status(500).send('Internal Server Error');
+  }
+}
 
 // Route to handle sending messages
-app.post('/group/:groupId/messages/send', sessionValidation, async (req, res) => {
+app.post('/group/:groupId/messages/send', sessionValidation, isAuthorizedGroup, async (req, res) => {
   try {
     const authenticated = isValidSession(req);
     const groupId = req.params.groupId; // Extract groupId from URL parameters
@@ -140,6 +166,7 @@ app.post('/group/:groupId/messages/send', sessionValidation, async (req, res) =>
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 app.get('/signup', (req, res) => {
   if (req.session.authenticated) {
