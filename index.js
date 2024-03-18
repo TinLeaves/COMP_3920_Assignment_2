@@ -20,7 +20,6 @@ const app = express();
 
 const expireTime = 1 * 60 * 60 * 1000; 
 
-
 /* secret information section */
 const mongodb_host = process.env.MONGODB_HOST;
 const mongodb_user = process.env.MONGODB_USER;
@@ -50,8 +49,6 @@ app.use(session({
 	resave: true
 }
 ));
-
-let authenticated = false; // Initialize globally
 
 // app.get('/', (req, res) => {
 //   // Set authenticated based on session
@@ -104,6 +101,29 @@ app.post('/createGroup', sessionValidation, async (req, res) => {
     }
   } catch (error) {
     console.error("Error creating group:", error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Route to display messages for a specific group
+app.get('/group/:groupId/messages', sessionValidation, async (req, res) => {
+  try {
+    const authenticated = isValidSession(req);
+    let username = null; // Initialize username as null
+    if (authenticated) {
+      username = req.session.username; // Set username if authenticated
+    }
+    const groupId = req.params.groupId;
+    
+    // Fetch group name by group ID
+    const groupName = await db_groups.getGroupNameById(groupId);
+
+    // Fetch group messages
+    const messages = await db_groups.getGroupMessages(groupId);
+    
+    res.render('groupMessages', { username, authenticated, groupName, messages }); // Pass groupName to the view
+  } catch (error) {
+    console.error("Error rendering group messages:", error);
     res.status(500).send('Internal Server Error');
   }
 });

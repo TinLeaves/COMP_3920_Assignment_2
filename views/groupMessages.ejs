@@ -1,0 +1,27 @@
+<%- include("templates/header") %>
+<h2>Group Messages - <%= groupName %></h2>
+<ul>
+  <% messages.forEach(message => { %>
+    <li>
+      <strong><%= message.username %>:</strong> <%= message.text %> - 
+      <% 
+        const sentDate = new Date(message.sent_datetime);
+        const now = new Date();
+        const diffInMs = now - sentDate;
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+        if (diffInMinutes < 60) { %>
+          <%= diffInMinutes %> minute<%= diffInMinutes !== 1 ? 's' : '' %> ago
+        <% } else if (diffInHours < 24) { %>
+          <%= diffInHours %> hour<%= diffInHours !== 1 ? 's' : '' %> ago
+        <% } else if (diffInDays === 1) { %>
+          Yesterday
+        <% } else { %>
+          <%= diffInDays %> day<%= diffInDays !== 1 ? 's' : '' %> ago
+        <% } %>
+    </li>
+  <% }); %>
+</ul>
+<%- include("templates/footer") %>
