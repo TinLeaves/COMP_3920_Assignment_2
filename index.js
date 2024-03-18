@@ -205,7 +205,7 @@ app.post('/loginSubmit', async (req, res) => {
 
   const results = await db_users.getUser({ user: username });
 
-  console.log("Results from database:", results);
+  // console.log("Results from database:", results);
 
   if (!username || results.length !== 1) {
       loginMsg = "User not found. ";
@@ -216,8 +216,8 @@ app.post('/loginSubmit', async (req, res) => {
 
   const storedPassword = results[0].password_hash; 
 
-  console.log("Input password:", password);
-  console.log("Stored password hash:", storedPassword);
+  // console.log("Input password:", password);
+  // console.log("Stored password hash:", storedPassword);
 
 
   if (!bcrypt.compare(password, storedPassword)) {
