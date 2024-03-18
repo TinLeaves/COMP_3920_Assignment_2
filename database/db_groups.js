@@ -124,4 +124,21 @@ async function getGroupNameById(groupId) {
     }
 }
 
-module.exports = { getUserGroupsByUsername, createGroup, getGroupMessages, getGroupNameById };
+async function sendMessage(groupId, username, messageText) {
+    const sendMessageSQL = `
+        INSERT INTO message (room_user_id, sent_datetime, text)
+        VALUES (
+            (SELECT room_user_id FROM room_user WHERE room_id = ? AND user_id = (SELECT user_id FROM user WHERE username = ?)),
+            NOW(),
+            ?
+        )
+    `;
+    try {
+        await database.query(sendMessageSQL, [groupId, username, messageText]);
+    } catch (error) {
+        console.error("Error sending message:", error);
+        throw error;
+    }
+}
+
+module.exports = { getUserGroupsByUsername, createGroup, getGroupMessages, getGroupNameById, sendMessage };

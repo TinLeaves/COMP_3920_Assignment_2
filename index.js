@@ -50,13 +50,6 @@ app.use(session({
 }
 ));
 
-// app.get('/', (req, res) => {
-//   // Set authenticated based on session
-//   const authenticated = isValidSession(req);
-//   const username = req.session.username;
-//   res.render('index', { authenticated, username });
-// });
-
 app.get('/', async (req, res) => {
   if (req.session.authenticated) {
     const username = req.session.username;
@@ -121,19 +114,33 @@ app.get('/group/:groupId/messages', sessionValidation, async (req, res) => {
     // Fetch group messages
     const messages = await db_groups.getGroupMessages(groupId);
     
-    res.render('groupMessages', { username, authenticated, groupName, messages }); // Pass groupName to the view
+    res.render('groupMessages', { username, authenticated, groupName, messages, groupId }); // Pass groupId to the view
   } catch (error) {
     console.error("Error rendering group messages:", error);
     res.status(500).send('Internal Server Error');
   }
 });
 
-// app.get('/signup', (req, res) => {
-//   const errorMsg = req.query.error;
-//   const signupError = req.query.signupError; 
-//   const authenticated = isValidSession(req);
-//   res.render('signup', { errorMsg, signupError, authenticated });
-// });
+
+// Route to handle sending messages
+app.post('/group/:groupId/messages/send', sessionValidation, async (req, res) => {
+  try {
+    const authenticated = isValidSession(req);
+    const groupId = req.params.groupId; // Extract groupId from URL parameters
+    const messageText = req.body.message;
+    const username = req.session.username;
+
+    // Call the function to insert the message into the database
+    await db_groups.sendMessage(groupId, username, messageText);
+
+    // Redirect back to the group messages page after sending the message
+    res.redirect(`/group/${groupId}/messages`);
+  } catch (error) {
+    console.error("Error sending message:", error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
 app.get('/signup', (req, res) => {
   if (req.session.authenticated) {
     res.redirect('/');
@@ -181,12 +188,6 @@ app.post('/signupSubmit', async (req, res) => {
   }
 });
 
-// app.get('/login', (req, res) => {
-//   const loginMsg = req.query.error;
-//   const authenticated = isValidSession(req);
-//   res.render('login', { loginMsg, authenticated });
-// });
-
 app.get('/login', (req, res) => {
   if (req.session.authenticated) {
     res.redirect('/');
@@ -195,7 +196,6 @@ app.get('/login', (req, res) => {
     res.render('login', { loginMsg, authenticated: false });
   }
 });
-
 
 app.post('/loginSubmit', async (req, res) => {
   const username = req.body.username;
