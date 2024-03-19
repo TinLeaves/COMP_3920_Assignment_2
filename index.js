@@ -146,7 +146,6 @@ app.get('/group/:groupId/invite', sessionValidation, async (req, res) => {
   }
 });
 
-
 // Route to display messages for a specific group
 app.get('/group/:groupId/messages', sessionValidation, async (req, res) => {
   if (req.session.authenticated) {

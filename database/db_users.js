@@ -118,4 +118,20 @@ async function getGroupMembers(groupId) {
     }
 }
 
-module.exports = {createUser, getUsers, getUser, getUserByUsername, getAllUsers, getGroupMembers};
+// Function to add emoji reaction to a message
+async function addMessageReaction(messageId, emojiId, userId) {
+    try {
+        // Insert the emoji reaction into the message_reaction table
+        const query = `
+            INSERT INTO message_reaction (message_id, emoji_id, user_id)
+            VALUES (?, ?, ?)
+        `;
+        await database.query(query, [messageId, emojiId, userId]);
+    } catch (error) {
+        console.error("Error adding message reaction:", error);
+        throw error;
+    }
+}
+
+
+module.exports = {createUser, getUsers, getUser, getUserByUsername, getAllUsers, getGroupMembers, addMessageReaction};
