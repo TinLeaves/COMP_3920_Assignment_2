@@ -1,0 +1,20 @@
+<%- include("templates/header") %>
+<h2>Invite People to Group</h2>
+
+<!-- Form to invite more people to the group -->
+<form action="/group/<%= groupId %>/invite" method="POST">
+  <div style="max-height: 100px; width:100%; overflow-y: auto;">
+    <% users.forEach(user => { %>
+      <input type="checkbox" id="<%= user.username %>" name="selectedUsers" value="<%= user.user_id %>">
+      <label for="<%= user.username %>"><%= user.username %></label><br>
+    <% }); %>
+  </div>
+  <br>
+  <button type="submit">Invite Selected Users</button>
+</form>
+<br>
+
+<a href="javascript:history.go(-1)">Go back</a> |
+<a href="/">Go back to home</a>
+
+<%- include("templates/footer") %>

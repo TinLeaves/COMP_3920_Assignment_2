@@ -103,4 +103,19 @@ async function getAllUsers(excludeCurrentUser) {
     }
 }
 
-module.exports = {createUser, getUsers, getUser, getUserByUsername, getAllUsers};
+async function getGroupMembers(groupId) {
+    try {
+        const query = `SELECT u.username
+		FROM user u
+		JOIN room_user ru ON u.user_id = ru.user_id
+		JOIN room r ON ru.room_id = r.room_id
+		WHERE r.room_id = ?
+		`;
+        const [rows, fields] = await database.query(query, [groupId]);
+        return rows;
+    } catch (error) {
+        throw error;
+    }
+}
+
+module.exports = {createUser, getUsers, getUser, getUserByUsername, getAllUsers, getGroupMembers};

@@ -1,0 +1,11 @@
+<%- include("templates/header") %>
+<h2>Group Members</h2>
+<div style="max-height: 100px; width:100%; overflow-y: auto;">
+    <% members.forEach(member => { %>
+        <p><%= member.username %></p>
+    <% }); %>
+</div>
+<br>
+<a href="javascript:history.go(-1)">Go back</a> |
+<a href="/">Go back to home</a>
+<%- include("templates/footer") %>

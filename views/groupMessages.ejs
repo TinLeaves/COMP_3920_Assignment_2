@@ -43,6 +43,16 @@
   <button type="submit">Send</button>
 </form>
 <br>
+
+<!-- Button to invite more people to the group -->
+<form action="/group/<%= groupId %>/invite" method="GET">
+    <button type="submit">Invite People</button>
+  </form>
+  <br>
+  <!-- Link to go to a new page to display all members -->
+  <a href="/group/<%= groupId %>/members">View Group Members</a>  
+<br>
+<!-- Link to go back to the home page -->
 <a href="/">Go back to home</a>
 
 <%- include("templates/footer") %>

@@ -114,6 +114,39 @@ app.post('/createGroup', sessionValidation, async (req, res) => {
   }
 });
 
+// Route to display all members of a group
+app.get('/group/:groupId/members', sessionValidation, async (req, res) => {
+  if (req.session.authenticated) {
+    const username = req.session.username;
+    try {
+      const authenticated = isValidSession(req);
+      const groupId = req.params.groupId;
+      const members = await db_users.getGroupMembers(groupId);
+      res.render('groupMembers', { username, members, authenticated });
+    } catch (error) {
+      console.error("Error rendering group members:", error);
+      res.status(500).send('Internal Server Error');
+    }
+  }
+});
+
+// Route to handle inviting people to the group
+app.get('/group/:groupId/invite', sessionValidation, async (req, res) => {
+  if (req.session.authenticated) {
+    const username = req.session.username;
+    try {
+      const authenticated = isValidSession(req);
+      const groupId = req.params.groupId;
+      const users = await db_users.getAllUsers();
+      res.render('inviteUsers', { username,users, authenticated, groupId });
+    } catch (error) {
+      console.error("Error rendering invite users page:", error);
+      res.status(500).send('Internal Server Error');
+    }
+  }
+});
+
+
 // Route to display messages for a specific group
 app.get('/group/:groupId/messages', sessionValidation, async (req, res) => {
   if (req.session.authenticated) {
