@@ -14,6 +14,9 @@
                 <tr>
                     <td style="padding: 5px; text-align: left;">
                         <a href="/group/<%= group.room_id %>/messages"><%= group.name %></a>
+                        <% if (group.unread_messages_count > 0) { %>
+                            (<%= group.unread_messages_count %>)
+                        <% } %>
                     </td>
                     <td style="padding: 5px; text-align: left;">
                         <% if (group.lastMessage.sent_datetime) { %>

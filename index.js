@@ -50,29 +50,12 @@ app.use(session({
 }
 ));
 
-// app.get('/', async (req, res) => {
-//   if (req.session.authenticated) {
-//       const username = req.session.username;
-//       try {
-//           const groupNames = await db_groups.getUserGroupsByUsername(username);
-//           const groupsWithLastMessage = await db_groups.getLastMessageForGroups(groupNames);
-//           const totalGroups = groupsWithLastMessage.length;
-//           res.render('index', { authenticated: true, username, userGroups: groupsWithLastMessage, totalGroups });
-//       } catch (error) {
-//           console.error("Error rendering index:", error);
-//           res.status(500).send('Internal Server Error');
-//       }
-//   } else {
-//       res.render('index', { authenticated: false });
-//   }
-// });
-
 app.get('/', async (req, res) => {
   if (req.session.authenticated) {
       const username = req.session.username;
       try {
           const user = await db_users.getUserByUsername(username);
-          const userId = user.user_id;
+          const userId = user.user_id; // Fetch user ID
 
           const groupNames = await db_groups.getUserGroupsByUsername(username);
           const groupsWithLastMessage = await db_groups.getLastMessageForGroups(groupNames);
@@ -80,9 +63,12 @@ app.get('/', async (req, res) => {
           // Iterate through groups to fetch unread messages count for each group
           for (const group of groupsWithLastMessage) {
               // Fetch last read message ID for the user in the group
-              const lastReadMessageId = await db_groups.getLastReadMessageId(username, group.room_id);
+              const lastReadMessageId = await db_groups.getLastReadMessageId(userId, group.room_id);
               // Fetch unread messages count for the group
               group.unread_messages = await db_groups.getUnreadMessagesCount(group.room_id, lastReadMessageId, userId);
+
+              // Update the last read message ID for the user in this group
+              await db_groups.updateLastReadMessageId(userId, group.room_id);
           }
 
           const totalGroups = groupsWithLastMessage.length;
@@ -95,6 +81,7 @@ app.get('/', async (req, res) => {
       res.render('index', { authenticated: false });
   }
 });
+
 
 // Route to render the create group page
 app.get('/createGroup', sessionValidation, async (req, res) => {
@@ -127,61 +114,37 @@ app.post('/createGroup', sessionValidation, async (req, res) => {
   }
 });
 
-
-// // Route to display messages for a specific group
-// app.get('/group/:groupId/messages', sessionValidation, async (req, res) => {
-//   try {
-//     const authenticated = isValidSession(req);
-//     const username = req.session.username;
-//     const groupId = req.params.groupId;
-
-//     // Check if the logged-in user is a member of the group
-//     const isMember = await db_groups.isUserMemberOfGroup(username, groupId);
-//     if (!isMember) {
-//       // If not a member, respond with a 400 error
-//       return res.status(400).send('You are not authorized to access this group. - 400');
-//     }
-    
-//     // Fetch group name by group ID
-//     const groupName = await db_groups.getGroupNameById(groupId);
-
-//     // Fetch group messages
-//     const messages = await db_groups.getGroupMessages(groupId);
-    
-//     res.render('groupMessages', { username, authenticated, groupName, messages, groupId }); // Pass groupId to the view
-//   } catch (error) {
-//     console.error("Error rendering group messages:", error);
-//     res.status(500).send('Internal Server Error');
-//   }
-// });
-
 // Route to display messages for a specific group
 app.get('/group/:groupId/messages', sessionValidation, async (req, res) => {
-  try {
-    const authenticated = isValidSession(req);
+  if (req.session.authenticated) {
     const username = req.session.username;
-    const groupId = req.params.groupId;
+    try {
+      const authenticated = isValidSession(req);
+      const user = await db_users.getUserByUsername(username);
+      const userId = user.user_id; // Fetch user ID
+      const groupId = req.params.groupId;
 
-    // Check if the logged-in user is a member of the group
-    const isMember = await db_groups.isUserMemberOfGroup(username, groupId);
-    if (!isMember) {
-      // If not a member, respond with a 400 error
-      return res.status(400).send('You are not authorized to access this group. - 400');
+      // Check if the logged-in user is a member of the group
+      const isMember = await db_groups.isUserMemberOfGroup(username, groupId); 
+      if (!isMember) {
+        // If not a member, respond with a 400 error
+        return res.status(400).send('You are not authorized to access this group. - 400');
+      }
+      
+      // Fetch group name by group ID
+      const groupName = await db_groups.getGroupNameById(groupId);
+
+      // Fetch group messages and update last read message ID
+      const messages = await db_groups.getGroupMessages(groupId, userId, username);
+
+      // Update the last read message ID for the user in this group
+      await db_groups.updateLastReadMessageId(userId, groupId); 
+
+      res.render('groupMessages', { userId, authenticated, groupName, messages, groupId, username });
+    } catch (error) {
+      console.error("Error rendering group messages:", error);
+      res.status(500).send('Internal Server Error');
     }
-    
-    // Fetch group name by group ID
-    const groupName = await db_groups.getGroupNameById(groupId);
-
-    // Fetch group messages and update last read message ID
-    const messages = await db_groups.getGroupMessages(groupId, username);
-
-    // Update the last read message ID for the user in this group
-    await db_groups.updateLastReadMessageId(username, groupId);
-
-    res.render('groupMessages', { username, authenticated, groupName, messages, groupId }); // Pass groupId to the view
-  } catch (error) {
-    console.error("Error rendering group messages:", error);
-    res.status(500).send('Internal Server Error');
   }
 });
 
