@@ -34,25 +34,6 @@
         <% if (message.unread) { %>
           (unread)
         <% } %>
-        <!-- Display associated emoji reactions -->
-        <% if (message.reactions && message.reactions.length > 0) { %>
-          <br>
-          <strong>Reactions:</strong>
-          <ul>
-            <% message.reactions.forEach(reaction => { %>
-              <li><img src="<%= reaction.emoji_url %>" alt="<%= reaction.emoji_name %>"></li>
-            <% }); %>
-          </ul>
-        <% } %>
-        <!-- Button to add more emojis -->
-        <form action="/group/<%= groupId %>/messages/<%= message.message_id %>/add-reaction" method="POST">
-          <select name="emoji_id">
-            <option value="1">Thumbs Up</option>
-            <option value="2">100 Percent</option>
-            <option value="3">Happy Face</option>
-          </select>
-          <button type="submit">Add Reaction</button>
-        </form>
     </li>
   <% }); %>
 </ul>
@@ -65,11 +46,11 @@
 
 <!-- Button to invite more people to the group -->
 <form action="/group/<%= groupId %>/invite" method="GET">
-  <button type="submit">Invite People</button>
-</form>
-<br>
-<!-- Link to go to a new page to display all members -->
-<a href="/group/<%= groupId %>/members">View Group Members</a>  
+    <button type="submit">Invite People</button>
+  </form>
+  <br>
+  <!-- Link to go to a new page to display all members -->
+  <a href="/group/<%= groupId %>/members">View Group Members</a>  
 <br>
 <!-- Link to go back to the home page -->
 <a href="/">Go back to home</a>
