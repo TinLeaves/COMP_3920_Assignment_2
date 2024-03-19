@@ -66,6 +66,21 @@ async function getUser(postData) {
 	}
 }
 
+async function getUserByUsername(username) {
+    const getUserByUsernameSQL = `
+        SELECT *
+        FROM user
+        WHERE username = ?
+    `;
+    try {
+        const [rows] = await database.query(getUserByUsernameSQL, [username]);
+        return rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+        console.error("Error getting user by username:", error);
+        throw error;
+    }
+}
+
 async function getAllUsers(excludeCurrentUser) {
     let getAllUsersSQL = `
         SELECT username
@@ -88,4 +103,4 @@ async function getAllUsers(excludeCurrentUser) {
     }
 }
 
-module.exports = {createUser, getUsers, getUser, getAllUsers};
+module.exports = {createUser, getUsers, getUser, getUserByUsername, getAllUsers};

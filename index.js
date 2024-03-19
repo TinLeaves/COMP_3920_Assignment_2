@@ -50,22 +50,51 @@ app.use(session({
 }
 ));
 
+// app.get('/', async (req, res) => {
+//   if (req.session.authenticated) {
+//       const username = req.session.username;
+//       try {
+//           const groupNames = await db_groups.getUserGroupsByUsername(username);
+//           const groupsWithLastMessage = await db_groups.getLastMessageForGroups(groupNames);
+//           const totalGroups = groupsWithLastMessage.length;
+//           res.render('index', { authenticated: true, username, userGroups: groupsWithLastMessage, totalGroups });
+//       } catch (error) {
+//           console.error("Error rendering index:", error);
+//           res.status(500).send('Internal Server Error');
+//       }
+//   } else {
+//       res.render('index', { authenticated: false });
+//   }
+// });
+
 app.get('/', async (req, res) => {
   if (req.session.authenticated) {
-    const username = req.session.username;
-    try {
-      const userGroups = await db_groups.getUserGroupsByUsername(username);
-      const totalGroups = userGroups.length;
-      res.render('index', { authenticated: true, username, userGroups, totalGroups });
-    } catch (error) {
-      console.error("Error rendering index:", error);
-      res.status(500).send('Internal Server Error');
-    }
+      const username = req.session.username;
+      try {
+          const user = await db_users.getUserByUsername(username);
+          const userId = user.user_id;
+
+          const groupNames = await db_groups.getUserGroupsByUsername(username);
+          const groupsWithLastMessage = await db_groups.getLastMessageForGroups(groupNames);
+
+          // Iterate through groups to fetch unread messages count for each group
+          for (const group of groupsWithLastMessage) {
+              // Fetch last read message ID for the user in the group
+              const lastReadMessageId = await db_groups.getLastReadMessageId(username, group.room_id);
+              // Fetch unread messages count for the group
+              group.unread_messages = await db_groups.getUnreadMessagesCount(group.room_id, lastReadMessageId, userId);
+          }
+
+          const totalGroups = groupsWithLastMessage.length;
+          res.render('index', { authenticated: true, username, userGroups: groupsWithLastMessage, totalGroups });
+      } catch (error) {
+          console.error("Error rendering index:", error);
+          res.status(500).send('Internal Server Error');
+      }
   } else {
-    res.render('index', { authenticated: false });
+      res.render('index', { authenticated: false });
   }
 });
-
 
 // Route to render the create group page
 app.get('/createGroup', sessionValidation, async (req, res) => {

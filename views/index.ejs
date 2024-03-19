@@ -16,14 +16,18 @@
                         <a href="/group/<%= group.room_id %>/messages"><%= group.name %></a>
                     </td>
                     <td style="padding: 5px; text-align: left;">
-                        <% if (group.last_message_date) { %>
-                            <% if (group.days_since_last_message === 0) { %>
-                                <%= group.last_message_date %> (today)
-                            <% } else if (group.days_since_last_message === 1) { %>
-                                <%= group.last_message_date %> (yesterday)
+                        <% if (group.lastMessage.sent_datetime) { %>
+                            <% const lastMessageDate = new Date(group.lastMessage.sent_datetime); %>
+                            <% const todayAdjusted = new Date(Date.now() - (7 * 60 * 60 * 1000)); %>
+                            <% const diffHours = Math.floor((todayAdjusted - lastMessageDate) / (1000 * 60 * 60)); %>
+                            <% const formattedDate = lastMessageDate.toLocaleString('en-US', { month: 'short', day: 'numeric' }); %>
+                            <% if (diffHours < 24) { %>
+                                <%= formattedDate %> (Today)
+                            <% } else if (diffHours < 48) { %>
+                                <%= formattedDate %> (Yesterday)
                             <% } else { %>
-                                <%= group.last_message_date %> (<%= group.days_since_last_message %> days ago)
-                            <% } %>
+                                <%= formattedDate %> (<%= Math.floor(diffHours / 24) %> days ago)
+                            <% } %>                                                      
                         <% } else { %>
                             No messages
                         <% } %>
