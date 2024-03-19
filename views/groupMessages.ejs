@@ -31,6 +31,9 @@
         <% } else { %>
           <%= Math.floor(diffInHours / 24) %> day<%= Math.floor(diffInHours / 24) !== 1 ? 's' : '' %> ago
         <% } %>
+        <% if (message.unread) { %>
+          (unread)
+        <% } %>
     </li>
   <% }); %>
 </ul>

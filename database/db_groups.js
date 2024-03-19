@@ -1,33 +1,5 @@
 const database = include('databaseConnection');
 
-// async function getUserGroupsByUsername(username) {
-//     const getUserGroupsSQL = `
-//     SELECT r.room_id, r.name, 
-//         CASE 
-//             WHEN MAX(m.sent_datetime) IS NOT NULL THEN DATE_FORMAT(MAX(m.sent_datetime), '%b %d')
-//             ELSE NULL
-//         END AS last_message_date, 
-//         DATEDIFF(CURDATE(), MAX(m.sent_datetime)) AS days_since_last_message,
-//         COALESCE(SUM(CASE WHEN m.sent_datetime > CURDATE() THEN 1 ELSE 0 END), 0) AS unread_messages
-//     FROM room_user ru
-//     JOIN room r ON ru.room_id = r.room_id
-//     LEFT JOIN message m ON ru.room_user_id = m.room_user_id
-//     JOIN user u ON ru.user_id = u.user_id
-//     WHERE u.username = ?
-//     GROUP BY r.room_id, r.name
-//     `;
-//     try {
-//         const [rows] = await database.query(getUserGroupsSQL, [username]);
-//         return rows.map(group => ({
-//             ...group,
-//             days_since_last_message: group.days_since_last_message < 0 ? 0 : group.days_since_last_message
-//         }));
-//     } catch (error) {
-//         console.error("Error getting user's groups:", error);
-//         return [];
-//     }
-// }
-
 async function getUserGroupsByUsername(username) {
     const getGroupNamesSQL = `
     SELECT r.room_id, r.name
@@ -89,7 +61,7 @@ async function getUnreadMessagesCount(groupId, lastReadMessageId, userId) {
     SELECT COUNT(*) AS unread_messages_count
     FROM message m
     JOIN room_user ru ON m.room_user_id = ru.room_user_id
-    WHERE ru.room_id = ? AND m.message_id > ? AND ru.user_id != ?
+    WHERE ru.room_id = ? AND m.message_id > ? AND ru.user_id = ?
     `;
     try {
         const [rows] = await database.query(getUnreadMessagesCountSQL, [groupId, lastReadMessageId, userId]);
@@ -150,9 +122,10 @@ async function createGroup(groupName, creatorUsername, selectedUsers) {
     }
 }
 
-async function getGroupMessages(groupId) {
+async function getGroupMessages(groupId, username) {
     const getGroupMessagesSQL = `
-    SELECT m.message_id, m.text, m.sent_datetime, u.username
+    SELECT m.message_id, m.text, m.sent_datetime, u.username,
+           (m.message_id > ru.last_read_message_id) AS unread
     FROM message m
     JOIN room_user ru ON m.room_user_id = ru.room_user_id
     JOIN user u ON ru.user_id = u.user_id
@@ -161,7 +134,7 @@ async function getGroupMessages(groupId) {
     `;
     try {
         const [rows] = await database.query(getGroupMessagesSQL, [groupId]);
-        return rows;
+        return rows.map(row => ({ ...row, unread: row.unread && row.username !== username })); // Set unread flag to false if message is sent by the current user
     } catch (error) {
         console.error("Error getting group messages:", error);
         return [];
@@ -215,6 +188,22 @@ async function isUserMemberOfGroup(username, groupId) {
       console.error("Error checking user membership:", error);
       throw error; // Propagate the error to the caller
     }
-  }
+}
 
-module.exports = { getUserGroupsByUsername, getLastReadMessageId, getLastMessageForGroups, getUnreadMessagesCount, createGroup, getGroupMessages, getGroupNameById, sendMessage, isUserMemberOfGroup };
+async function updateLastReadMessageId(username, groupId) {
+    const updateLastReadMessageIdSQL = `
+        UPDATE room_user
+        JOIN user ON room_user.user_id = user.user_id
+        SET last_read_message_id = (SELECT MAX(message_id) FROM message WHERE room_user_id = room_user.room_user_id)
+        WHERE user.username = ? AND room_user.room_id = ?
+    `;
+    try {
+        await database.query(updateLastReadMessageIdSQL, [username, groupId]);
+    } catch (error) {
+        console.error("Error updating last read message ID:", error);
+        throw error;
+    }
+}
+
+
+module.exports = { getUserGroupsByUsername, getLastReadMessageId, getLastMessageForGroups, getUnreadMessagesCount, createGroup, getGroupMessages, getGroupNameById, sendMessage, isUserMemberOfGroup, updateLastReadMessageId };
